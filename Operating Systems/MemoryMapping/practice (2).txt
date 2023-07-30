@@ -1,0 +1,43 @@
+#include <sys/mman.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <pthread.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+void* replaceIntegers(void* arg) 
+{
+    char* map = (char*)arg;
+    for(int i=0; i<50; i++)
+    {
+        if(map[i] >= '0' && map[i] <= '9') 
+        {
+            map[i] = ' ';
+        }
+    }
+    return NULL;
+}
+
+int main(int argc, char* argv[]) 
+{
+    char* fileName = argv[1];
+    int fd = open(fileName, O_RDWR);
+    if (fd == -1) 
+    {
+        perror("open");
+        return 1;
+    }
+    void* map = mmap(NULL, 100, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    if (map == MAP_FAILED)
+    {
+        perror("mmap");
+        return 1;
+    }
+    pthread_t thread1, thread2;
+    pthread_create(&thread1, NULL, replaceIntegers, (void*)map);
+    pthread_create(&thread2, NULL, replaceIntegers, (void*)(map+50));
+    pthread_join(thread1, NULL);
+    pthread_join(thread2, NULL);
+    close(fd);
+    return 0;
+}
